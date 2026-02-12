@@ -1,105 +1,49 @@
-'use client'
+import './globals.css'
 
-import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
-
-export default function Home() {
-  const [session, setSession] = useState<any>(null)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [message, setMessage] = useState('')
-  const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session)
-    })
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
-
-  const handleLogin = async () => {
-    setLoading(true)
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-
-    if (error) {
-      setMessage(error.message)
-    }
-
-    setLoading(false)
-  }
-
-  const handleRegister = async () => {
-    setLoading(true)
-
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-    })
-
-    if (error) {
-      setMessage(error.message)
-    } else {
-      setMessage('Check your email to confirm.')
-    }
-
-    setLoading(false)
-  }
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-  }
-
-  if (!session) {
-    return (
-      <div style={{ padding: 40 }}>
-        <h1>WorkPilot Login</h1>
-
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-
-        <div style={{ marginTop: 10 }}>
-          <button onClick={handleLogin} disabled={loading}>
-            Login
-          </button>
-
-          <button onClick={handleRegister} disabled={loading}>
-            Register
-          </button>
-        </div>
-
-        {message && <p>{message}</p>}
-      </div>
-    )
-  }
-
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   return (
-    <div style={{ padding: 40 }}>
-      <h1>WorkPilot Dashboard</h1>
-      <p>You are logged in as {session.user.email}</p>
+    <html lang="en">
+      <body className="bg-gray-100 text-gray-900">
+        <div className="flex min-h-screen">
 
-      <button onClick={handleLogout}>Logout</button>
-    </div>
+          {/* Sidebar */}
+          <aside className="w-64 bg-white shadow-md p-6 hidden md:block">
+            <h2 className="text-xl font-bold mb-6">
+              WorkPilot
+            </h2>
+
+            <nav className="space-y-3">
+              <a
+                href="/"
+                className="block px-3 py-2 rounded hover:bg-gray-100"
+              >
+                Dashboard
+              </a>
+            </nav>
+          </aside>
+
+          {/* Main */}
+          <div className="flex-1 flex flex-col">
+
+            {/* Header */}
+            <header className="bg-white shadow px-6 py-4 flex justify-between">
+              <h1 className="font-semibold">
+                WorkPilot
+              </h1>
+            </header>
+
+            {/* Page Content */}
+            <main className="p-6">
+              {children}
+            </main>
+
+          </div>
+        </div>
+      </body>
+    </html>
   )
 }
