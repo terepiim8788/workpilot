@@ -10,14 +10,15 @@ export default function Home() {
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
+  const [authError, setAuthError] = useState('')
 
   const [showModal, setShowModal] = useState(false)
   const [title, setTitle] = useState('')
   const [date, setDate] = useState('')
   const [time, setTime] = useState('')
+  const [eventError, setEventError] = useState('')
 
-  // SESSION
+  // ===== SESSION =====
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
@@ -33,46 +34,55 @@ export default function Home() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // LOAD EVENTS
+  // ===== LOAD EVENTS =====
   useEffect(() => {
     if (!session) return
 
     const loadEvents = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('events')
         .select('*')
         .eq('assigned_to', session.user.id)
 
-      if (data) setEvents(data)
+      if (!error && data) {
+        setEvents(data)
+      }
     }
 
     loadEvents()
   }, [session])
 
+  // ===== AUTH =====
   const handleLogin = async () => {
-    setError('')
+    setAuthError('')
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
-    if (error) setError(error.message)
+    if (error) setAuthError(error.message)
   }
 
   const handleRegister = async () => {
-    setError('')
+    setAuthError('')
     const { error } = await supabase.auth.signUp({
       email,
       password,
     })
-    if (error) setError(error.message)
+    if (error) setAuthError(error.message)
   }
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
   }
 
+  // ===== ADD EVENT =====
   const handleAddEvent = async () => {
-    if (!title || !date || !time) return
+    setEventError('')
+
+    if (!title || !date || !time) {
+      setEventError('All fields are required')
+      return
+    }
 
     const { data, error } = await supabase
       .from('events')
@@ -86,7 +96,12 @@ export default function Home() {
       ])
       .select()
 
-    if (!error && data) {
+    if (error) {
+      setEventError(error.message)
+      return
+    }
+
+    if (data) {
       setEvents([...events, ...data])
       setShowModal(false)
       setTitle('')
@@ -95,10 +110,16 @@ export default function Home() {
     }
   }
 
+  // ===== HOURS =====
   const hours = Array.from({ length: 24 }).map((_, i) => i)
 
+  // ===== STATES =====
   if (loadingSession) {
-    return <div className="p-10 bg-gray-100 min-h-screen">Loading...</div>
+    return (
+      <div className="p-10 bg-gray-100 min-h-screen text-black">
+        Loading...
+      </div>
+    )
   }
 
   if (!session) {
@@ -139,9 +160,9 @@ export default function Home() {
             Register
           </button>
 
-          {error && (
+          {authError && (
             <p className="mt-4 text-sm text-red-600 text-center">
-              {error}
+              {authError}
             </p>
           )}
         </div>
@@ -149,12 +170,13 @@ export default function Home() {
     )
   }
 
+  // ===== CALENDAR =====
   return (
     <div className="min-h-screen bg-gray-100 p-6 text-black">
 
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">
-          24h Weekly Calendar
+          24h Calendar
         </h1>
 
         <div className="flex gap-3">
@@ -174,10 +196,10 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Calendar */}
       <div className="bg-white rounded-xl shadow overflow-auto max-h-[75vh]">
-        <div className="grid grid-cols-8 min-w-[1000px]">
+        <div className="grid grid-cols-2 border">
 
+          {/* Time column */}
           <div className="border-r bg-gray-50">
             {hours.map((hour) => (
               <div
@@ -189,35 +211,38 @@ export default function Home() {
             ))}
           </div>
 
-          {Array.from({ length: 7 }).map((_, i) => (
-            <div key={i} className="border-r last:border-r-0">
-              {hours.map((hour) => {
-                const matching = events.filter((event) => {
-                  if (!event.start_time) return false
-                  return (
-                    parseInt(event.start_time.split(':')[0]) === hour
-                  )
-                })
-
+          {/* Event column */}
+          <div>
+            {hours.map((hour) => {
+              const matching = events.filter((event) => {
+                if (!event.start_time) return false
                 return (
-                  <div key={hour} className="h-16 border-b relative">
-                    {matching.map((event) => (
-                      <div
-                        key={event.id}
-                        className="absolute inset-1 bg-blue-600 text-white text-xs rounded-lg p-2 shadow"
-                      >
-                        {event.title}
-                      </div>
-                    ))}
-                  </div>
+                  parseInt(event.start_time.split(':')[0]) === hour
                 )
-              })}
-            </div>
-          ))}
+              })
+
+              return (
+                <div key={hour} className="h-16 border-b relative">
+                  {matching.map((event) => (
+                    <div
+                      key={event.id}
+                      className="absolute inset-1 bg-blue-600 text-white text-xs rounded-lg p-2 shadow"
+                    >
+                      {event.title}
+                      <div className="text-[10px] opacity-80">
+                        {event.start_time}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            })}
+          </div>
+
         </div>
       </div>
 
-      {/* Modal */}
+      {/* MODAL */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
           <div className="bg-white p-6 rounded-xl w-96">
@@ -247,6 +272,12 @@ export default function Home() {
               onChange={(e) => setTime(e.target.value)}
             />
 
+            {eventError && (
+              <p className="text-sm text-red-600 mb-3">
+                {eventError}
+              </p>
+            )}
+
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowModal(false)}
@@ -265,7 +296,6 @@ export default function Home() {
           </div>
         </div>
       )}
-
     </div>
   )
 }
