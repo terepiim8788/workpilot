@@ -5,12 +5,11 @@ import { supabase } from '../lib/supabase'
 
 export default function Home() {
   const [session, setSession] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
-  const [employees, setEmployees] = useState<any[]>([])
-  const [events, setEvents] = useState<any[]>([])
-  const [currentWeekStart, setCurrentWeekStart] = useState(new Date())
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [message, setMessage] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  // SESSION
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
@@ -25,200 +24,82 @@ export default function Home() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // PROFILE
-  useEffect(() => {
-    if (!session) return
+  const handleLogin = async () => {
+    setLoading(true)
 
-    const loadProfile = async () => {
-      const { data } = await supabase
-        .from('users')
-        .select('role, company_id')
-        .eq('id', session.user.id)
-        .single()
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
 
-      if (data) {
-        setProfile({
-          role: data.role,
-          companyId: data.company_id,
-        })
-      }
+    if (error) {
+      setMessage(error.message)
     }
 
-    loadProfile()
-  }, [session])
-
-  // LOAD TEAM
-  useEffect(() => {
-    if (!profile?.companyId) return
-
-    const loadTeam = async () => {
-      const { data } = await supabase
-        .from('users')
-        .select('id, role')
-        .eq('company_id', profile.companyId)
-
-      if (data) setEmployees(data)
-    }
-
-    loadTeam()
-  }, [profile])
-
-  // REALTIME EVENTS
-  useEffect(() => {
-    if (!profile?.companyId) return
-
-    const loadEvents = async () => {
-      const { data } = await supabase
-        .from('events')
-        .select('*')
-        .eq('company_id', profile.companyId)
-
-      if (data) setEvents(data)
-    }
-
-    loadEvents()
-
-    const channel = supabase
-      .channel('events-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'events',
-        },
-        loadEvents
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [profile])
-
-  const getStartOfWeek = (date: Date) => {
-    const d = new Date(date)
-    const day = d.getDay()
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1)
-    return new Date(d.setDate(diff))
+    setLoading(false)
   }
 
-  const startOfWeek = getStartOfWeek(currentWeekStart)
+  const handleRegister = async () => {
+    setLoading(true)
 
-  const weekDays = Array.from({ length: 7 }).map((_, i) => {
-    const day = new Date(startOfWeek)
-    day.setDate(startOfWeek.getDate() + i)
-    return day
-  })
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+    })
 
-  const hours = Array.from({ length: 12 }).map((_, i) => 8 + i)
+    if (error) {
+      setMessage(error.message)
+    } else {
+      setMessage('Check your email to confirm.')
+    }
 
-  const statusColor = (status: string) => {
-    if (status === 'done') return 'bg-green-200'
-    if (status === 'accepted') return 'bg-yellow-200'
-    return 'bg-red-200'
+    setLoading(false)
   }
 
-  if (!session) return <div className="p-10">Login first...</div>
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+  }
+
+  if (!session) {
+    return (
+      <div style={{ padding: 40 }}>
+        <h1>WorkPilot Login</h1>
+
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+
+        <div style={{ marginTop: 10 }}>
+          <button onClick={handleLogin} disabled={loading}>
+            Login
+          </button>
+
+          <button onClick={handleRegister} disabled={loading}>
+            Register
+          </button>
+        </div>
+
+        {message && <p>{message}</p>}
+      </div>
+    )
+  }
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">
-        WorkPilot Enterprise Calendar
-      </h1>
+    <div style={{ padding: 40 }}>
+      <h1>WorkPilot Dashboard</h1>
+      <p>You are logged in as {session.user.email}</p>
 
-      <div className="flex gap-2 mb-4">
-        <button
-          className="px-3 py-1 bg-gray-200 rounded"
-          onClick={() =>
-            setCurrentWeekStart(
-              new Date(currentWeekStart.getTime() - 7 * 86400000)
-            )
-          }
-        >
-          ◀
-        </button>
-        <button
-          className="px-3 py-1 bg-gray-200 rounded"
-          onClick={() =>
-            setCurrentWeekStart(
-              new Date(currentWeekStart.getTime() + 7 * 86400000)
-            )
-          }
-        >
-          ▶
-        </button>
-      </div>
-
-      <div className="grid grid-cols-8 border">
-        <div></div>
-        {weekDays.map((day) => (
-          <div
-            key={day.toISOString()}
-            className="border text-center font-semibold p-2"
-          >
-            {day.toLocaleDateString(undefined, {
-              weekday: 'short',
-              day: 'numeric',
-            })}
-          </div>
-        ))}
-
-        {hours.map((hour) => (
-          <>
-            <div
-              key={hour}
-              className="border p-2 text-sm text-gray-500"
-            >
-              {hour}:00
-            </div>
-
-            {weekDays.map((day) => {
-              const cellEvents = events.filter((event) => {
-                if (!event.start_date) return false
-                const eventDate = new Date(event.start_date)
-                return (
-                  eventDate.toDateString() === day.toDateString() &&
-                  eventDate.getHours() === hour
-                )
-              })
-
-              return (
-                <div
-                  key={day.toISOString() + hour}
-                  className="border relative h-20 p-1"
-                >
-                  {cellEvents.map((event) => {
-                    const start = new Date(event.start_date)
-                    const end = event.end_date
-                      ? new Date(event.end_date)
-                      : start
-
-                    const duration =
-                      (end.getTime() - start.getTime()) / 3600000
-
-                    return (
-                      <div
-                        key={event.id}
-                        className={`absolute w-full p-1 rounded text-xs shadow ${statusColor(
-                          event.status
-                        )}`}
-                        style={{
-                          height: `${duration * 80}px`,
-                          top: 0,
-                        }}
-                      >
-                        {event.title}
-                        <div>{event.status}</div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )
-            })}
-          </>
-        ))}
-      </div>
+      <button onClick={handleLogout}>Logout</button>
     </div>
   )
 }
