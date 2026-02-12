@@ -117,9 +117,11 @@ export default function Home() {
                 />
               ))}
 
-              {events
-                .filter(e => e.start_date === dayString)
-                .map(e => {
+              {events.map(e => {
+  console.log("EVENT DATE:", e.start_date)
+  console.log("DAY STRING:", dayString)
+  return null
+})}
                   const hour = parseInt(e.start_time.split(':')[0])
                   const minute = parseInt(e.start_time.split(':')[1])
 
