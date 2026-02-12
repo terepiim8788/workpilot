@@ -95,7 +95,6 @@ export default function Home() {
     }
   }
 
-  // WEEK LOGIC
   const getStartOfWeek = (date: Date) => {
     const d = new Date(date)
     const day = d.getDay()
@@ -124,7 +123,6 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-100 p-6 text-black">
 
-      {/* HEADER */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Weekly Calendar</h1>
 
@@ -145,7 +143,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* WEEK NAV */}
       <div className="flex gap-4 mb-4">
         <button
           className="px-4 py-2 bg-white border rounded"
@@ -170,11 +167,9 @@ export default function Home() {
         </button>
       </div>
 
-      {/* CALENDAR */}
       <div className="bg-white rounded-xl shadow overflow-auto max-h-[75vh]">
         <div className="grid grid-cols-8 min-w-[1200px]">
 
-          {/* TIME COLUMN */}
           <div className="border-r bg-gray-50">
             {hours.map(hour => (
               <div
@@ -187,7 +182,6 @@ export default function Home() {
             ))}
           </div>
 
-          {/* DAY COLUMNS */}
           {weekDays.map(day => {
             const dateString = formatDateLocal(day)
 
@@ -214,7 +208,10 @@ export default function Home() {
                   ))}
 
                   {events
-                    .filter(e => e.start_date === dateString)
+                    .filter(e => {
+                      if (!e.start_date) return false
+                      return e.start_date.slice(0, 10) === dateString
+                    })
                     .map(event => {
 
                       const [h, m] = event.start_time.split(':')
@@ -252,7 +249,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* MODAL */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
           <div className="bg-white p-6 rounded-xl w-96">
@@ -312,7 +308,6 @@ export default function Home() {
           </div>
         </div>
       )}
-
     </div>
   )
 }
