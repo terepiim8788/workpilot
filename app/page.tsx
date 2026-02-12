@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { useRouter } from 'next/navigation'
 
 const HOUR_HEIGHT = 64
 const HEADER_HEIGHT = 48
@@ -14,6 +15,8 @@ function formatDateLocal(date: Date) {
 }
 
 export default function Home() {
+  const router = useRouter()
+
   const [session, setSession] = useState<any>(null)
   const [loadingSession, setLoadingSession] = useState(true)
   const [events, setEvents] = useState<any[]>([])
@@ -30,18 +33,26 @@ export default function Home() {
   // SESSION
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session)
+      if (!data.session) {
+        router.push('/login')
+      } else {
+        setSession(data.session)
+      }
       setLoadingSession(false)
     })
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
+      if (!session) {
+        router.push('/login')
+      } else {
+        setSession(session)
+      }
     })
 
     return () => subscription.unsubscribe()
-  }, [])
+  }, [router])
 
   // LOAD EVENTS
   useEffect(() => {
@@ -95,6 +106,12 @@ export default function Home() {
     }
   }
 
+  if (loadingSession) {
+    return <div className="p-10">Loading...</div>
+  }
+
+  if (!session) return null
+
   const getStartOfWeek = (date: Date) => {
     const d = new Date(date)
     const day = d.getDay()
@@ -111,14 +128,6 @@ export default function Home() {
   })
 
   const hours = Array.from({ length: 24 }).map((_, i) => i)
-
-  if (loadingSession) {
-    return <div className="p-10 bg-gray-100 min-h-screen">Loading...</div>
-  }
-
-  if (!session) {
-    return <div className="p-10 bg-gray-100 min-h-screen">Please login.</div>
-  }
 
   return (
     <div className="min-h-screen bg-gray-100 p-6 text-black">
@@ -141,30 +150,6 @@ export default function Home() {
             Logout
           </button>
         </div>
-      </div>
-
-      <div className="flex gap-4 mb-4">
-        <button
-          className="px-4 py-2 bg-white border rounded"
-          onClick={() =>
-            setCurrentWeekStart(
-              new Date(currentWeekStart.getTime() - 7 * 86400000)
-            )
-          }
-        >
-          ◀ Previous
-        </button>
-
-        <button
-          className="px-4 py-2 bg-white border rounded"
-          onClick={() =>
-            setCurrentWeekStart(
-              new Date(currentWeekStart.getTime() + 7 * 86400000)
-            )
-          }
-        >
-          Next ▶
-        </button>
       </div>
 
       <div className="bg-white rounded-xl shadow overflow-auto max-h-[75vh]">
@@ -208,10 +193,7 @@ export default function Home() {
                   ))}
 
                   {events
-                    .filter(e => {
-                      if (!e.start_date) return false
-                      return e.start_date.slice(0, 10) === dateString
-                    })
+                    .filter(e => e.start_date?.slice(0, 10) === dateString)
                     .map(event => {
 
                       const [h, m] = event.start_time.split(':')
@@ -230,15 +212,9 @@ export default function Home() {
                         <div
                           key={event.id}
                           className="absolute left-1 right-1 bg-blue-600 text-white text-xs rounded-lg p-2 shadow"
-                          style={{
-                            top,
-                            height: height - 4,
-                          }}
+                          style={{ top, height: height - 4 }}
                         >
                           {event.title}
-                          <div className="text-[10px] opacity-80">
-                            {event.start_time} ({event.duration_hours || 1}h)
-                          </div>
                         </div>
                       )
                     })}
@@ -249,65 +225,6 @@ export default function Home() {
         </div>
       </div>
 
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-xl w-96">
-            <h2 className="text-lg font-bold mb-4">Add Event</h2>
-
-            <input
-              type="text"
-              placeholder="Title"
-              className="w-full border rounded p-2 mb-3"
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-            />
-
-            <input
-              type="date"
-              className="w-full border rounded p-2 mb-3"
-              value={date}
-              onChange={e => setDate(e.target.value)}
-            />
-
-            <input
-              type="time"
-              className="w-full border rounded p-2 mb-3"
-              value={time}
-              onChange={e => setTime(e.target.value)}
-            />
-
-            <select
-              className="w-full border rounded p-2 mb-4"
-              value={duration}
-              onChange={e => setDuration(parseInt(e.target.value))}
-            >
-              {[1,2,3,4,5,6,7,8].map(d => (
-                <option key={d} value={d}>{d} hour(s)</option>
-              ))}
-            </select>
-
-            {error && (
-              <p className="text-sm text-red-600 mb-3">{error}</p>
-            )}
-
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowModal(false)}
-                className="px-4 py-2 border rounded"
-              >
-                Cancel
-              </button>
-
-              <button
-                onClick={handleAddEvent}
-                className="px-4 py-2 bg-blue-600 text-white rounded"
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
