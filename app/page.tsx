@@ -12,11 +12,11 @@ export default function Home() {
   const [title, setTitle] = useState('')
   const [date, setDate] = useState('')
   const [time, setTime] = useState('')
+  const [duration, setDuration] = useState(1)
   const [error, setError] = useState('')
 
   const [currentWeekStart, setCurrentWeekStart] = useState(new Date())
 
-  // ===== SESSION =====
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
@@ -32,7 +32,6 @@ export default function Home() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // ===== LOAD EVENTS =====
   useEffect(() => {
     if (!session) return
 
@@ -48,10 +47,6 @@ export default function Home() {
     loadEvents()
   }, [session])
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-  }
-
   const handleAddEvent = async () => {
     if (!title || !date || !time) {
       setError('All fields required')
@@ -65,6 +60,7 @@ export default function Home() {
           title,
           start_date: date,
           start_time: time,
+          duration_hours: duration,
           assigned_to: session.user.id,
         },
       ])
@@ -81,11 +77,11 @@ export default function Home() {
       setTitle('')
       setDate('')
       setTime('')
+      setDuration(1)
       setError('')
     }
   }
 
-  // ===== WEEK LOGIC =====
   const getStartOfWeek = (date: Date) => {
     const d = new Date(date)
     const day = d.getDay()
@@ -114,55 +110,19 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-100 p-6 text-black">
 
-      {/* HEADER */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">
           Weekly Calendar
         </h1>
 
-        <div className="flex gap-3">
-          <button
-            onClick={() => setShowModal(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg"
-          >
-            + Add Event
-          </button>
-
-          <button
-            onClick={handleLogout}
-            className="bg-black text-white px-4 py-2 rounded-lg"
-          >
-            Logout
-          </button>
-        </div>
-      </div>
-
-      {/* WEEK NAVIGATION */}
-      <div className="flex gap-4 mb-4">
         <button
-          className="px-4 py-2 bg-white border rounded"
-          onClick={() =>
-            setCurrentWeekStart(
-              new Date(currentWeekStart.getTime() - 7 * 86400000)
-            )
-          }
+          onClick={() => setShowModal(true)}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg"
         >
-          ◀ Previous
-        </button>
-
-        <button
-          className="px-4 py-2 bg-white border rounded"
-          onClick={() =>
-            setCurrentWeekStart(
-              new Date(currentWeekStart.getTime() + 7 * 86400000)
-            )
-          }
-        >
-          Next ▶
+          + Add Event
         </button>
       </div>
 
-      {/* CALENDAR */}
       <div className="bg-white rounded-xl shadow overflow-auto max-h-[75vh]">
         <div className="grid grid-cols-8 min-w-[1200px]">
 
@@ -171,21 +131,20 @@ export default function Home() {
             {hours.map((hour) => (
               <div
                 key={hour}
-                className="h-16 border-b px-3 text-sm flex items-start pt-2 text-gray-600"
+                className="h-16 border-b px-3 text-sm pt-2 text-gray-600"
               >
                 {hour.toString().padStart(2, '0')}:00
               </div>
             ))}
           </div>
 
-          {/* Day columns */}
+          {/* Days */}
           {weekDays.map((day) => {
             const dateString = day.toISOString().split('T')[0]
 
             return (
-              <div key={dateString} className="border-r last:border-r-0">
+              <div key={dateString} className="border-r last:border-r-0 relative">
 
-                {/* Day header */}
                 <div className="h-12 border-b flex items-center justify-center font-semibold bg-gray-50">
                   {day.toLocaleDateString(undefined, {
                     weekday: 'short',
@@ -193,34 +152,35 @@ export default function Home() {
                   })}
                 </div>
 
-                {/* Hours */}
-                {hours.map((hour) => {
-                  const matching = events.filter((event) => {
-                    if (!event.start_date || !event.start_time)
-                      return false
+                <div className="relative">
+                  {hours.map((hour) => (
+                    <div key={hour} className="h-16 border-b"></div>
+                  ))}
 
-                    return (
-                      event.start_date === dateString &&
-                      parseInt(event.start_time.split(':')[0]) === hour
-                    )
-                  })
+                  {events
+                    .filter(e => e.start_date === dateString)
+                    .map((event) => {
+                      const startHour = parseInt(event.start_time.split(':')[0])
+                      const top = startHour * 64 // 64px per hour
+                      const height = (event.duration_hours || 1) * 64
 
-                  return (
-                    <div key={hour} className="h-16 border-b relative">
-                      {matching.map((event) => (
+                      return (
                         <div
                           key={event.id}
-                          className="absolute inset-1 bg-blue-600 text-white text-xs rounded-lg p-2 shadow"
+                          className="absolute left-1 right-1 bg-blue-600 text-white text-xs rounded-lg p-2 shadow"
+                          style={{
+                            top: top + 48, // 48px header offset
+                            height: height - 4,
+                          }}
                         >
                           {event.title}
                           <div className="text-[10px] opacity-80">
-                            {event.start_time}
+                            {event.start_time} ({event.duration_hours || 1}h)
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  )
-                })}
+                      )
+                    })}
+                </div>
               </div>
             )
           })}
@@ -252,10 +212,20 @@ export default function Home() {
 
             <input
               type="time"
-              className="w-full border rounded p-2 mb-4"
+              className="w-full border rounded p-2 mb-3"
               value={time}
               onChange={(e) => setTime(e.target.value)}
             />
+
+            <select
+              className="w-full border rounded p-2 mb-4"
+              value={duration}
+              onChange={(e) => setDuration(parseInt(e.target.value))}
+            >
+              {[1,2,3,4,5,6,7,8].map(d => (
+                <option key={d} value={d}>{d} hour(s)</option>
+              ))}
+            </select>
 
             {error && (
               <p className="text-sm text-red-600 mb-3">
