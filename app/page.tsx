@@ -11,12 +11,18 @@ import { supabase } from '../lib/supabase'
 
 export default function Home() {
   const [session, setSession] = useState<any>(null)
+  const [loadingSession, setLoadingSession] = useState(true)
   const [events, setEvents] = useState<any[]>([])
   const [currentWeekStart, setCurrentWeekStart] = useState(new Date())
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [message, setMessage] = useState('')
 
+  // SESSION
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
+      setLoadingSession(false)
     })
 
     const {
@@ -28,6 +34,7 @@ export default function Home() {
     return () => subscription.unsubscribe()
   }, [])
 
+  // LOAD EVENTS
   useEffect(() => {
     if (!session) return
 
@@ -42,6 +49,32 @@ export default function Home() {
 
     loadEvents()
   }, [session])
+
+  const handleLogin = async () => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+
+    if (error) setMessage(error.message)
+  }
+
+  const handleRegister = async () => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+    })
+
+    if (error) {
+      setMessage(error.message)
+    } else {
+      setMessage('Check your email to confirm.')
+    }
+  }
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+  }
 
   const getStartOfWeek = (date: Date) => {
     const d = new Date(date)
@@ -60,7 +93,6 @@ export default function Home() {
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
-
     if (!over) return
 
     const eventId = active.id
@@ -78,15 +110,75 @@ export default function Home() {
     )
   }
 
-  if (!session) {
-    return <div className="p-10">Login first...</div>
+  // LOADING
+  if (loadingSession) {
+    return <div className="p-10">Loading...</div>
   }
 
+  // LOGIN UI
+  if (!session) {
+    return (
+      <div className="flex items-center justify-center min-h-[80vh]">
+        <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-md">
+          <h1 className="text-2xl font-bold mb-6 text-center">
+            WorkPilot Login
+          </h1>
+
+          <input
+            type="email"
+            placeholder="Email"
+            className="w-full border rounded-lg p-3 mb-4"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+
+          <input
+            type="password"
+            placeholder="Password"
+            className="w-full border rounded-lg p-3 mb-4"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+
+          <button
+            onClick={handleLogin}
+            className="w-full bg-black text-white py-3 rounded-lg mb-3"
+          >
+            Login
+          </button>
+
+          <button
+            onClick={handleRegister}
+            className="w-full border py-3 rounded-lg"
+          >
+            Register
+          </button>
+
+          {message && (
+            <p className="mt-4 text-sm text-center text-red-500">
+              {message}
+            </p>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // DASHBOARD
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">
-        Drag & Drop Calendar
-      </h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">
+          Drag & Drop Calendar
+        </h1>
+
+        <button
+          onClick={handleLogout}
+          className="bg-gray-900 text-white px-4 py-2 rounded-lg"
+        >
+          Logout
+        </button>
+      </div>
 
       <div className="flex gap-4 mb-4">
         <button
