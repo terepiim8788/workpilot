@@ -18,7 +18,6 @@ export default function Home() {
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
 
-  // SESSION
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
@@ -34,7 +33,6 @@ export default function Home() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // LOAD EVENTS
   useEffect(() => {
     if (!session) return
 
@@ -55,7 +53,6 @@ export default function Home() {
       email,
       password,
     })
-
     if (error) setMessage(error.message)
   }
 
@@ -64,12 +61,7 @@ export default function Home() {
       email,
       password,
     })
-
-    if (error) {
-      setMessage(error.message)
-    } else {
-      setMessage('Check your email to confirm.')
-    }
+    if (error) setMessage(error.message)
   }
 
   const handleLogout = async () => {
@@ -110,16 +102,14 @@ export default function Home() {
     )
   }
 
-  // LOADING
   if (loadingSession) {
     return <div className="p-10">Loading...</div>
   }
 
-  // LOGIN UI
   if (!session) {
     return (
-      <div className="flex items-center justify-center min-h-[80vh]">
-        <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-md">
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
           <h1 className="text-2xl font-bold mb-6 text-center">
             WorkPilot Login
           </h1>
@@ -127,7 +117,7 @@ export default function Home() {
           <input
             type="email"
             placeholder="Email"
-            className="w-full border rounded-lg p-3 mb-4"
+            className="w-full border border-gray-300 rounded-lg p-3 mb-4"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
@@ -135,21 +125,21 @@ export default function Home() {
           <input
             type="password"
             placeholder="Password"
-            className="w-full border rounded-lg p-3 mb-4"
+            className="w-full border border-gray-300 rounded-lg p-3 mb-4"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
 
           <button
             onClick={handleLogin}
-            className="w-full bg-black text-white py-3 rounded-lg mb-3"
+            className="w-full bg-blue-600 text-white py-3 rounded-lg mb-3 hover:bg-blue-700"
           >
             Login
           </button>
 
           <button
             onClick={handleRegister}
-            className="w-full border py-3 rounded-lg"
+            className="w-full border border-gray-300 py-3 rounded-lg hover:bg-gray-100"
           >
             Register
           </button>
@@ -164,12 +154,11 @@ export default function Home() {
     )
   }
 
-  // DASHBOARD
   return (
-    <div>
+    <div className="min-h-screen bg-gray-100 p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">
-          Drag & Drop Calendar
+          Calendar
         </h1>
 
         <button
@@ -182,7 +171,7 @@ export default function Home() {
 
       <div className="flex gap-4 mb-4">
         <button
-          className="px-3 py-1 bg-gray-200 rounded"
+          className="px-3 py-1 bg-white border rounded"
           onClick={() =>
             setCurrentWeekStart(
               new Date(currentWeekStart.getTime() - 7 * 86400000)
@@ -192,7 +181,7 @@ export default function Home() {
           ◀
         </button>
         <button
-          className="px-3 py-1 bg-gray-200 rounded"
+          className="px-3 py-1 bg-white border rounded"
           onClick={() =>
             setCurrentWeekStart(
               new Date(currentWeekStart.getTime() + 7 * 86400000)
@@ -239,9 +228,9 @@ function DayColumn({
   return (
     <div
       ref={setNodeRef}
-      className="bg-white p-4 rounded-xl shadow min-h-[200px]"
+      className="bg-white p-4 rounded-xl shadow min-h-[200px] border"
     >
-      <h2 className="font-semibold mb-3">
+      <h2 className="font-semibold mb-3 text-gray-700">
         {day.toLocaleDateString(undefined, {
           weekday: 'short',
           day: 'numeric',
@@ -273,7 +262,7 @@ function DraggableEvent({ event }: { event: any }) {
       style={style}
       {...listeners}
       {...attributes}
-      className="bg-black text-white p-2 rounded mb-2 cursor-grab text-sm"
+      className="bg-blue-600 text-white p-2 rounded-lg mb-2 cursor-grab text-sm shadow"
     >
       {event.title}
     </div>
