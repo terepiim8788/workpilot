@@ -6,6 +6,13 @@ import { supabase } from '../lib/supabase'
 const HOUR_HEIGHT = 64
 const HEADER_HEIGHT = 48
 
+function formatDateLocal(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 export default function Home() {
   const [session, setSession] = useState<any>(null)
   const [loadingSession, setLoadingSession] = useState(true)
@@ -20,7 +27,7 @@ export default function Home() {
 
   const [currentWeekStart, setCurrentWeekStart] = useState(new Date())
 
-  // ===== SESSION =====
+  // SESSION
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
@@ -36,7 +43,7 @@ export default function Home() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // ===== LOAD EVENTS =====
+  // LOAD EVENTS
   useEffect(() => {
     if (!session) return
 
@@ -88,6 +95,7 @@ export default function Home() {
     }
   }
 
+  // WEEK LOGIC
   const getStartOfWeek = (date: Date) => {
     const d = new Date(date)
     const day = d.getDay()
@@ -171,21 +179,21 @@ export default function Home() {
             {hours.map(hour => (
               <div
                 key={hour}
-                className="h-16 border-b px-3 text-sm pt-2 text-gray-600"
+                className="border-b px-3 text-sm pt-2 text-gray-600"
+                style={{ height: HOUR_HEIGHT }}
               >
                 {hour.toString().padStart(2, '0')}:00
               </div>
             ))}
           </div>
 
-          {/* DAYS */}
+          {/* DAY COLUMNS */}
           {weekDays.map(day => {
-            const dateString = day.toISOString().split('T')[0]
+            const dateString = formatDateLocal(day)
 
             return (
               <div key={dateString} className="border-r relative">
 
-                {/* DAY HEADER */}
                 <div
                   className="border-b flex items-center justify-center font-semibold bg-gray-50"
                   style={{ height: HEADER_HEIGHT }}
@@ -196,7 +204,6 @@ export default function Home() {
                   })}
                 </div>
 
-                {/* GRID */}
                 <div className="relative">
                   {hours.map(hour => (
                     <div
@@ -206,10 +213,10 @@ export default function Home() {
                     />
                   ))}
 
-                  {/* EVENTS */}
                   {events
                     .filter(e => e.start_date === dateString)
                     .map(event => {
+
                       const [h, m] = event.start_time.split(':')
                       const startHour = parseInt(h)
                       const startMinute = parseInt(m)
