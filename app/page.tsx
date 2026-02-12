@@ -7,10 +7,15 @@ export default function Home() {
   const [session, setSession] = useState<any>(null)
   const [loadingSession, setLoadingSession] = useState(true)
   const [events, setEvents] = useState<any[]>([])
-  const [currentWeekStart, setCurrentWeekStart] = useState(new Date())
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+
+  const [showModal, setShowModal] = useState(false)
+  const [title, setTitle] = useState('')
+  const [date, setDate] = useState('')
+  const [time, setTime] = useState('')
 
   // SESSION
   useEffect(() => {
@@ -66,13 +71,36 @@ export default function Home() {
     await supabase.auth.signOut()
   }
 
+  const handleAddEvent = async () => {
+    if (!title || !date || !time) return
+
+    const { data, error } = await supabase
+      .from('events')
+      .insert([
+        {
+          title,
+          start_date: date,
+          start_time: time,
+          assigned_to: session.user.id,
+        },
+      ])
+      .select()
+
+    if (!error && data) {
+      setEvents([...events, ...data])
+      setShowModal(false)
+      setTitle('')
+      setDate('')
+      setTime('')
+    }
+  }
+
   const hours = Array.from({ length: 24 }).map((_, i) => i)
 
   if (loadingSession) {
     return <div className="p-10 bg-gray-100 min-h-screen">Loading...</div>
   }
 
-  // 🔐 LOGIN UI
   if (!session) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100 text-black">
@@ -84,7 +112,7 @@ export default function Home() {
           <input
             type="email"
             placeholder="Email"
-            className="w-full border border-gray-300 rounded-lg p-3 mb-4"
+            className="w-full border rounded-lg p-3 mb-4"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
@@ -92,7 +120,7 @@ export default function Home() {
           <input
             type="password"
             placeholder="Password"
-            className="w-full border border-gray-300 rounded-lg p-3 mb-4"
+            className="w-full border rounded-lg p-3 mb-4"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
@@ -106,7 +134,7 @@ export default function Home() {
 
           <button
             onClick={handleRegister}
-            className="w-full border border-gray-300 py-3 rounded-lg"
+            className="w-full border py-3 rounded-lg"
           >
             Register
           </button>
@@ -121,7 +149,6 @@ export default function Home() {
     )
   }
 
-  // 📅 CALENDAR
   return (
     <div className="min-h-screen bg-gray-100 p-6 text-black">
 
@@ -130,18 +157,27 @@ export default function Home() {
           24h Weekly Calendar
         </h1>
 
-        <button
-          onClick={handleLogout}
-          className="bg-black text-white px-4 py-2 rounded-lg"
-        >
-          Logout
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowModal(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg"
+          >
+            + Add Event
+          </button>
+
+          <button
+            onClick={handleLogout}
+            className="bg-black text-white px-4 py-2 rounded-lg"
+          >
+            Logout
+          </button>
+        </div>
       </div>
 
+      {/* Calendar */}
       <div className="bg-white rounded-xl shadow overflow-auto max-h-[75vh]">
         <div className="grid grid-cols-8 min-w-[1000px]">
 
-          {/* Time column */}
           <div className="border-r bg-gray-50">
             {hours.map((hour) => (
               <div
@@ -153,16 +189,83 @@ export default function Home() {
             ))}
           </div>
 
-          {/* 7 empty day columns for now */}
           {Array.from({ length: 7 }).map((_, i) => (
             <div key={i} className="border-r last:border-r-0">
-              {hours.map((hour) => (
-                <div key={hour} className="h-16 border-b"></div>
-              ))}
+              {hours.map((hour) => {
+                const matching = events.filter((event) => {
+                  if (!event.start_time) return false
+                  return (
+                    parseInt(event.start_time.split(':')[0]) === hour
+                  )
+                })
+
+                return (
+                  <div key={hour} className="h-16 border-b relative">
+                    {matching.map((event) => (
+                      <div
+                        key={event.id}
+                        className="absolute inset-1 bg-blue-600 text-white text-xs rounded-lg p-2 shadow"
+                      >
+                        {event.title}
+                      </div>
+                    ))}
+                  </div>
+                )
+              })}
             </div>
           ))}
         </div>
       </div>
+
+      {/* Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-xl w-96">
+            <h2 className="text-lg font-bold mb-4">
+              Add Event
+            </h2>
+
+            <input
+              type="text"
+              placeholder="Title"
+              className="w-full border rounded p-2 mb-3"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+
+            <input
+              type="date"
+              className="w-full border rounded p-2 mb-3"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
+
+            <input
+              type="time"
+              className="w-full border rounded p-2 mb-4"
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+            />
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowModal(false)}
+                className="px-4 py-2 border rounded"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={handleAddEvent}
+                className="px-4 py-2 bg-blue-600 text-white rounded"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
