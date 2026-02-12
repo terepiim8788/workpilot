@@ -3,10 +3,20 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
+const HOUR_HEIGHT = 60
+
+function format(date: Date) {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
 export default function Home() {
   const [session, setSession] = useState<any>(null)
   const [events, setEvents] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [currentWeek, setCurrentWeek] = useState(new Date())
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -30,27 +40,123 @@ export default function Home() {
     load()
   }, [session])
 
+  const getStartOfWeek = (date: Date) => {
+    const d = new Date(date)
+    const day = d.getDay()
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+    return new Date(d.setDate(diff))
+  }
+
+  const start = getStartOfWeek(currentWeek)
+
+  const days = Array.from({ length: 7 }).map((_, i) => {
+    const d = new Date(start)
+    d.setDate(start.getDate() + i)
+    return d
+  })
+
+  const hours = Array.from({ length: 24 }).map((_, i) => i)
+
   if (loading) return <div>Loading...</div>
   if (!session) return <div>Please login.</div>
 
   return (
-    <div style={{ padding: 40 }}>
-      <h1>My Events</h1>
+    <div style={{ padding: 30 }}>
 
-      {events.length === 0 && <p>No events yet</p>}
+      <h1>Weekly Calendar</h1>
 
-      {events.map(e => (
-        <div key={e.id} style={{
-          border: '1px solid #ccc',
-          padding: 10,
-          marginBottom: 10
-        }}>
-          <strong>{e.title}</strong>
-          <div>{e.start_date}</div>
-          <div>{e.start_time}</div>
-          <div>{e.duration_hours}h</div>
+      <div style={{ display: 'flex', marginTop: 20 }}>
+
+        {/* Time column */}
+        <div>
+          {hours.map(h => (
+            <div
+              key={h}
+              style={{
+                height: HOUR_HEIGHT,
+                borderBottom: '1px solid #ddd',
+                width: 60
+              }}
+            >
+              {String(h).padStart(2, '0')}:00
+            </div>
+          ))}
         </div>
-      ))}
+
+        {/* Day columns */}
+        {days.map(day => {
+          const dayString = format(day)
+
+          return (
+            <div
+              key={dayString}
+              style={{
+                borderLeft: '1px solid #ddd',
+                position: 'relative',
+                width: 150
+              }}
+            >
+              <div
+                style={{
+                  textAlign: 'center',
+                  fontWeight: 'bold',
+                  borderBottom: '1px solid #ddd',
+                  padding: 5
+                }}
+              >
+                {dayString}
+              </div>
+
+              {hours.map(h => (
+                <div
+                  key={h}
+                  style={{
+                    height: HOUR_HEIGHT,
+                    borderBottom: '1px solid #eee'
+                  }}
+                />
+              ))}
+
+              {events
+                .filter(e => e.start_date === dayString)
+                .map(e => {
+                  const hour = parseInt(e.start_time.split(':')[0])
+                  const minute = parseInt(e.start_time.split(':')[1])
+
+                  const top =
+                    hour * HOUR_HEIGHT +
+                    (minute / 60) * HOUR_HEIGHT +
+                    30 // header offset
+
+                  const height =
+                    (e.duration_hours || 1) * HOUR_HEIGHT
+
+                  return (
+                    <div
+                      key={e.id}
+                      style={{
+                        position: 'absolute',
+                        top,
+                        left: 5,
+                        right: 5,
+                        height: height - 4,
+                        background: '#2563eb',
+                        color: 'white',
+                        padding: 5,
+                        borderRadius: 6,
+                        fontSize: 12
+                      }}
+                    >
+                      {e.title}
+                    </div>
+                  )
+                })}
+            </div>
+          )
+        })}
+
+      </div>
     </div>
   )
 }
+
