@@ -103,21 +103,25 @@ export default function Home() {
   }
 
   if (loadingSession) {
-    return <div className="p-10">Loading...</div>
+    return (
+      <div className="p-10 text-black bg-gray-100 min-h-screen">
+        Loading...
+      </div>
+    )
   }
 
   if (!session) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      <div className="flex items-center justify-center min-h-screen bg-gray-100 text-black">
         <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
-          <h1 className="text-2xl font-bold mb-6 text-center">
+          <h1 className="text-2xl font-bold mb-6 text-center text-black">
             WorkPilot Login
           </h1>
 
           <input
             type="email"
             placeholder="Email"
-            className="w-full border border-gray-300 rounded-lg p-3 mb-4"
+            className="w-full border border-gray-300 rounded-lg p-3 mb-4 text-black"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
@@ -125,7 +129,7 @@ export default function Home() {
           <input
             type="password"
             placeholder="Password"
-            className="w-full border border-gray-300 rounded-lg p-3 mb-4"
+            className="w-full border border-gray-300 rounded-lg p-3 mb-4 text-black"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
@@ -139,13 +143,13 @@ export default function Home() {
 
           <button
             onClick={handleRegister}
-            className="w-full border border-gray-300 py-3 rounded-lg hover:bg-gray-100"
+            className="w-full border border-gray-400 py-3 rounded-lg hover:bg-gray-100 text-black"
           >
             Register
           </button>
 
           {message && (
-            <p className="mt-4 text-sm text-center text-red-500">
+            <p className="mt-4 text-sm text-center text-red-600">
               {message}
             </p>
           )}
@@ -155,40 +159,41 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
+    <div className="min-h-screen bg-gray-100 p-6 text-black">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">
+        <h1 className="text-2xl font-bold text-black">
           Calendar
         </h1>
 
         <button
           onClick={handleLogout}
-          className="bg-gray-900 text-white px-4 py-2 rounded-lg"
+          className="bg-black text-white px-4 py-2 rounded-lg"
         >
           Logout
         </button>
       </div>
 
-      <div className="flex gap-4 mb-4">
+      <div className="flex gap-4 mb-6">
         <button
-          className="px-3 py-1 bg-white border rounded"
+          className="px-4 py-2 bg-white border border-gray-400 rounded text-black font-semibold"
           onClick={() =>
             setCurrentWeekStart(
               new Date(currentWeekStart.getTime() - 7 * 86400000)
             )
           }
         >
-          ◀
+          ◀ Previous
         </button>
+
         <button
-          className="px-3 py-1 bg-white border rounded"
+          className="px-4 py-2 bg-white border border-gray-400 rounded text-black font-semibold"
           onClick={() =>
             setCurrentWeekStart(
               new Date(currentWeekStart.getTime() + 7 * 86400000)
             )
           }
         >
-          ▶
+          Next ▶
         </button>
       </div>
 
@@ -228,9 +233,9 @@ function DayColumn({
   return (
     <div
       ref={setNodeRef}
-      className="bg-white p-4 rounded-xl shadow min-h-[200px] border"
+      className="bg-white p-4 rounded-xl shadow border min-h-[220px]"
     >
-      <h2 className="font-semibold mb-3 text-gray-700">
+      <h2 className="font-semibold mb-3 text-black">
         {day.toLocaleDateString(undefined, {
           weekday: 'short',
           day: 'numeric',
