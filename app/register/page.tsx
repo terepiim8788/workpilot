@@ -1,19 +1,25 @@
 'use client'
 
 export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 import { useSearchParams } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 
 export default function Register() {
   const searchParams = useSearchParams()
-  const token = searchParams.get('token')
 
+  const [token, setToken] = useState<string | null>(null)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    const t = searchParams.get('token')
+    setToken(t)
+  }, [searchParams])
 
   const handleRegister = async () => {
     if (!token) {
@@ -23,7 +29,6 @@ export default function Register() {
 
     setLoading(true)
 
-    // Kontrolli invite
     const { data: invite, error: inviteError } = await supabase
       .from('invites')
       .select('*')
@@ -43,7 +48,6 @@ export default function Register() {
       return
     }
 
-    // Registreeri kasutaja
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -58,18 +62,20 @@ export default function Register() {
     setLoading(false)
   }
 
+  if (!token) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p>Loading invite...</p>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="bg-white p-8 shadow rounded w-96">
         <h1 className="text-xl font-bold mb-4">
           Register via Invite
         </h1>
-
-        {!token && (
-          <p className="text-red-500 mb-4">
-            Invalid invite link.
-          </p>
-        )}
 
         <input
           type="email"
@@ -90,7 +96,7 @@ export default function Register() {
         <button
           onClick={handleRegister}
           disabled={loading}
-          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+          className="w-full bg-blue-600 text-white py-2 rounded"
         >
           {loading ? 'Creating...' : 'Register'}
         </button>
