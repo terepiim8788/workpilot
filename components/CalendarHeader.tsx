@@ -1,4 +1,14 @@
-export default function CalendarHeader({ view, setView, onAdd }) {
+type CalendarHeaderProps = {
+  view: 'week' | 'month'
+  setView: (v: 'week' | 'month') => void
+  onAdd: () => void
+}
+
+export default function CalendarHeader({
+  view,
+  setView,
+  onAdd,
+}: CalendarHeaderProps) {
   return (
     <div className="flex justify-between items-center mb-6">
       <h1 className="text-2xl font-bold">Calendar</h1>
@@ -6,14 +16,18 @@ export default function CalendarHeader({ view, setView, onAdd }) {
       <div className="flex gap-3">
         <button
           onClick={() => setView('week')}
-          className={`px-4 py-2 rounded-lg ${view === 'week' ? 'bg-blue-600 text-white' : 'bg-gray-300'}`}
+          className={`px-4 py-2 rounded-lg ${
+            view === 'week' ? 'bg-blue-600 text-white' : 'bg-gray-300'
+          }`}
         >
           Week
         </button>
 
         <button
           onClick={() => setView('month')}
-          className={`px-4 py-2 rounded-lg ${view === 'month' ? 'bg-blue-600 text-white' : 'bg-gray-300'}`}
+          className={`px-4 py-2 rounded-lg ${
+            view === 'month' ? 'bg-blue-600 text-white' : 'bg-gray-300'
+          }`}
         >
           Month
         </button>
