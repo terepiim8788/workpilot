@@ -1,74 +1,63 @@
-import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { useEffect, useState } from "react"
+import { CalendarEvent } from "@/app/calendar/page"
 
 export default function useCalendarEvents() {
+  const [events, setEvents] = useState<CalendarEvent[]>([])
   const [session, setSession] = useState<any>(null)
-  const [events, setEvents] = useState<any[]>([])
 
+  // Load events on mount
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session)
-    })
+    const load = async () => {
+      const res = await fetch("/api/events")
+      const data = await res.json()
+      setEvents(data)
+    }
+    load()
   }, [])
 
-  useEffect(() => {
-    if (!session) return
-
-    supabase
-      .from('events')
-      .select('*')
-      .eq('assigned_to', session.user.id)
-      .then(({ data }) => {
-        if (data) setEvents(data)
-      })
-  }, [session])
-
-  const addEvent = async ({ title, date, time, duration }) => {
-    const { data } = await supabase
-      .from('events')
-      .insert([
-        {
-          title,
-          start_date: date,
-          start_time: time,
-          duration_hours: duration,
-          assigned_to: session.user.id,
-        },
-      ])
-      .select()
-
-    if (data) setEvents(prev => [...prev, ...data])
-  }
-
-  const updateEvent = async (id, { title, date, time, duration }) => {
-    const { data } = await supabase
-      .from('events')
-      .update({
+  const addEvent = async ({
+    title,
+    date,
+    time,
+    duration,
+  }: {
+    title: string
+    date: string
+    time: string
+    duration: number
+  }) => {
+    const res = await fetch("/api/events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
         title,
         start_date: date,
         start_time: time,
         duration_hours: duration,
-      })
-      .eq('id', id)
-      .select()
+      }),
+    })
 
-    if (data) {
-      setEvents(prev =>
-        prev.map(e => (e.id === id ? data[0] : e))
-      )
+    if (res.ok) {
+      const newEvent = await res.json()
+      setEvents((prev) => [...prev, newEvent])
     }
   }
 
-  const deleteEvent = async (id) => {
-    await supabase.from('events').delete().eq('id', id)
-    setEvents(prev => prev.filter(e => e.id !== id))
+  const deleteEvent = async (id: string) => {
+    const res = await fetch(`/api/events/${id}`, {
+      method: "DELETE",
+    })
+
+    if (res.ok) {
+      setEvents((prev) => prev.filter((ev) => ev.id !== id))
+    }
   }
 
   return {
     session,
     events,
+    setEvents,
     addEvent,
-    updateEvent,
     deleteEvent,
   }
 }
